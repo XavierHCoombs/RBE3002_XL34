@@ -21,13 +21,13 @@ class PathPlanner:
         rospy.init_node("path_planner")
         ## Create a new service called "plan_path" that accepts messages of
         ## type GetPlan and calls self.plan_path() when a message is received
-        # TODO
+        rospy.Service('plan_path', GetPlan, self.plan_path)
         ## Create a publisher for the C-space (the enlarged occupancy grid)
+        rospy.Subscriber('/map', OccupancyGrid, self.call_calc_cspace) #OccupancyGrid Subscriber
         ## The topic is "/path_planner/cspace", the message type is GridCells
-        # TODO
+        self.pub = rospy.Publisher('/path_planner/cspace',GridCells,queue_size =10)
         ## Create publishers for A* (expanded cells, frontier, ...)
         ## Choose a the topic names, the message type is GridCells
-        # TODO
         ## Initialize the request counter
         # TODO
         ## Sleep to allow roscore to do some housekeeping
@@ -44,10 +44,9 @@ class PathPlanner:
         :param y [int] The cell Y coordinate.
         :return  [int] The index.
         """
-        ### REQUIRED CREDIT
-        pass
-
-
+        index = y * mapdata.info.width + x
+        
+        return index
 
     @staticmethod
     def euclidean_distance(x1, y1, x2, y2):
@@ -59,9 +58,12 @@ class PathPlanner:
         :param y2 [int or float] Y coordinate of second point.
         :return   [float]        The distance.
         """
-        ### REQUIRED CREDIT
-        pass
+        distanceX = x2-x1
+        distanceY = y2-y1
         
+        euclideanDist = math.sqrt(distanceX**2 + distanceY**2)
+        
+        return euclideanDist
 
 
     @staticmethod
@@ -73,7 +75,11 @@ class PathPlanner:
         :param y       [int]           The cell Y coordinate.
         :return        [Point]         The position in the world.
         """
-        ### REQUIRED CREDIT
+        #World Coordinates
+        worldp.x = int((x*mapdata.resolution) + mapdata.pose.x)
+        worldp.y = int((y*mapdata.resolution) + mapdata.pose.y)
+        
+        return (worldp.x, worldp.y)
         pass
 
 
@@ -86,8 +92,11 @@ class PathPlanner:
         :param wp      [Point]         The world coordinate.
         :return        [(int,int)]     The cell position as a tuple.
         """
-        ### REQUIRED CREDIT
-        pass
+        #Grid Coordinates
+        gridp.x = int((worldp.x - mapdata.pose.x) / mapdata.resolution)
+        gridp.y = int((worldp.y - mapdata.pose.y) / mapdata.resolution)
+        
+        return(gridp.x, gridp.y)
 
 
         
@@ -115,8 +124,11 @@ class PathPlanner:
         :param y       [int]           The Y coordinate in the grid.
         :return        [boolean]       True if the cell is walkable, False otherwise
         """
-        ### REQUIRED CREDIT
-        pass
+        index = self.grid_to_index(x,y)
+        if mapdata.data[index] < obj and mapdata.info.width >= x and mapdata.info.height >= y:
+            return True
+        else:
+            return False
 
                
 
@@ -129,8 +141,16 @@ class PathPlanner:
         :param y       [int]           The Y coordinate in the grid.
         :return        [[(int,int)]]   A list of walkable 4-neighbors.
         """
-        ### REQUIRED CREDIT
-        pass
+        if self.is_cell_walkable(mapdata, x+1, y):
+            walkFour.add((x+1, y))
+        if self.is_cell_walkable(mapdata, x-1, y):
+            walkFour.add((x-1, y))
+        if self.is_cell_walkable(mapdata, x, y+1):
+            walkFour.add((x, y+1))
+        if self.is_cell_walkable(x, y-1):
+            walkFour.is_cell_walkable((x, y+1))
+            
+        return walkFour
 
     
     
@@ -143,8 +163,25 @@ class PathPlanner:
         :param y       [int]           The Y coordinate in the grid.
         :return        [[(int,int)]]   A list of walkable 8-neighbors.
         """
-        ### REQUIRED CREDIT
-        pass
+        if self.is_cell_walkable(mapdata, x+1, y):
+            walkEight.add((x+1, y))
+        if self.is_cell_walkable(mapdata, x-1, y):
+            walkEight.add((x-1, y))
+        if self.is_cell_walkable(mapdata, x, y+1):
+            walkEight.add((x, y+1))
+        if self.is_cell_walkable(x, y-1):
+            walkEight.is_cell_walkable((x, y+1))
+
+        if self.is_cell_walkable(mapdata, x+1, y-1):
+            walkEight.add((x+1, y-1))
+        if self.is_cell_walkable(mapdata, x-1, y-1):
+            walkEight.add((x-1, y-1))
+        if self.is_cell_walkable(mapdata, x+1, y+1):
+            walkEight.add((x+1, y+1))
+        if self.is_cell_walkable(x-1, y-1):
+            walkEight.is_cell_walkable((x-1, y+1))
+            
+        return walkEight
 
     
     
