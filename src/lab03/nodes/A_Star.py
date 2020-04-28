@@ -25,7 +25,7 @@ class A_Star:
         self.explored = []
         self.unexplored = []
         self.front = []
-        self.map = OccupancyGrid
+        self.map = OccupancyGrid()
         
         #Publishers
         self.exPub =  rospy.Publisher('/explored', GridCells, queue_size=1)
