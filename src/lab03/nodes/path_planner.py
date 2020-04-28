@@ -11,20 +11,20 @@ from geometry_msgs.msg import Point, Pose, PoseStamped
 class PathPlanner:
 
 
-    
+
     def __init__(self):
         """
         Class constructor
         """
         ### REQUIRED CREDIT
         ## Initialize the node and call it "path_planner"
-        rospy.init_node("path_planner")
+        rospy.init_node("path_planner", anonymous=True)
         ## Create a new service called "plan_path" that accepts messages of
         ## type GetPlan and calls self.plan_path() when a message is received
-        # TODO
+        self.path_plan_service = rospy.Service('plan_path', GetPLan, self.plan_path())
         ## Create a publisher for the C-space (the enlarged occupancy grid)
         ## The topic is "/path_planner/cspace", the message type is GridCells
-        # TODO
+        self.c_space_pub = rospy.Publisher('/path_planner/cspace', GridCells, queue_size=10)
         ## Create publishers for A* (expanded cells, frontier, ...)
         ## Choose a the topic names, the message type is GridCells
         # TODO
@@ -61,7 +61,7 @@ class PathPlanner:
         """
         ### REQUIRED CREDIT
         pass
-        
+
 
 
     @staticmethod
@@ -77,7 +77,7 @@ class PathPlanner:
         pass
 
 
-        
+
     @staticmethod
     def world_to_grid(mapdata, wp):
         """
@@ -90,7 +90,7 @@ class PathPlanner:
         pass
 
 
-        
+
     @staticmethod
     def path_to_poses(mapdata, path):
         """
@@ -102,7 +102,7 @@ class PathPlanner:
         ### REQUIRED CREDIT
         pass
 
-    
+
 
     @staticmethod
     def is_cell_walkable(mapdata, x, y):
@@ -118,7 +118,7 @@ class PathPlanner:
         ### REQUIRED CREDIT
         pass
 
-               
+
 
     @staticmethod
     def neighbors_of_4(mapdata, x, y):
@@ -132,8 +132,8 @@ class PathPlanner:
         ### REQUIRED CREDIT
         pass
 
-    
-    
+
+
     @staticmethod
     def neighbors_of_8(mapdata, x, y):
         """
@@ -146,8 +146,8 @@ class PathPlanner:
         ### REQUIRED CREDIT
         pass
 
-    
-    
+
+
     @staticmethod
     def request_map():
         """
@@ -176,16 +176,16 @@ class PathPlanner:
         ## Create a GridCells message and publish it
         # TODO
         ## Return the C-space
-        pass
+        return mapdata
 
 
-    
+
     def a_star(self, mapdata, start, goal):
         ### REQUIRED CREDIT
         rospy.loginfo("Executing A* from (%d,%d) to (%d,%d)" % (start[0], start[1], goal[0], goal[1]))
 
 
-    
+
     @staticmethod
     def optimize_path(path):
         """
@@ -196,7 +196,7 @@ class PathPlanner:
         ### EXTRA CREDIT
         rospy.loginfo("Optimizing path")
 
-        
+
 
     def path_to_message(self, mapdata, path):
         """
@@ -208,12 +208,12 @@ class PathPlanner:
         rospy.loginfo("Returning a Path message")
 
 
-        
+
     def plan_path(self, msg):
         """
         Plans a path between the start and goal locations in the requested.
         Internally uses A* to plan the optimal path.
-        :param req 
+        :param req
         """
         ## Request the map
         ## In case of error, return an empty path
@@ -232,7 +232,7 @@ class PathPlanner:
         return self.path_to_message(mapdata, waypoints)
 
 
-    
+
     def run(self):
         """
         Runs the node until Ctrl-C is pressed.
@@ -240,6 +240,6 @@ class PathPlanner:
         rospy.spin()
 
 
-        
+
 if __name__ == '__main__':
     PathPlanner().run()
