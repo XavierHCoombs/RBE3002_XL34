@@ -1,12 +1,16 @@
 #!/usr/bin/env python
 import rospy
 import math
+import sys
 import priority_queue
 import map_helper
 from nav_msgs.msg import OccupancyGrid, GridCells, Path
 from geometry_msgs.msg import PoseStamped,Pose, Quaternion, Point, PoseWithCovarianceStamped, PoseWithCovariance
 from nav_msgs.srv import GetPlan
 from tf.transformations import quaternion_from_euler, euler_from_quaternion
+
+from std_msgs.msg import Header
+from beginner_tutorials.srv import *
 
 class A_Star:
 
@@ -36,7 +40,10 @@ class A_Star:
         #Subscribers
         rospy.Subscriber('/map', OccupancyGrid, self.set_map)
         
-        
+        #wait to recieve the map
+        rospy.sleep(5)
+        #services
+        s=rospy.Service('a_star', GetPlan, self.handle_a_star)
  
 
     def handle_a_star(self, req):
@@ -60,7 +67,19 @@ class A_Star:
             This can be changed to call the expanded map
             :return:
         """
-        pass
+        #get resolution of the map and round the incoming values
+        res=round(self.map.info.resolution,1)
+        start_x=round(start[0],1)
+        start_y=round(start[1],1)
+        goal_x=round(goal[0],1)
+        goal_y=round(goal[1],1)
+        
+        start = (start_x,start_y)
+        goal = (goal_x, goal_y)
+        
+        return (start, goal)
+        
+        #pass
 
 
     def a_star(self, start, goal):
@@ -225,8 +244,144 @@ class A_Star:
             :param points: list of tuples of the path
             :return: Path()
         """
-        pass
+        path=[]
+        i=0
+        poseArray=[]
+        #invert the list so the points are in order from the start to goal
+        points=list(reversed(points))
+        # print(points)
+
+        while i<len(points):
+            k=points[i]
+            point=Point()
+            point.x=k[0]
+            point.y=k[1]
+            point.z=k[2]
+
+            orientation=Quaternion()
+
+            #####Calculate the appropriate orientation for the robot to rotate to to move to each cell in a straight line
+            if i==0:
+
+                orientation.x,orientation.y,orientation.z,orientation.w=quaternion_from_euler(0,0,0)
+            else:
+                #in the global frame
+                ##X CHANGES
+                #was previously going directly to right, goal is further the right. continue straight
+                if prevPt.x < point.x and prev_yaw==0:
+                    print(prevPt.x)
+                    print(point.x)
+                    print("continue to the right")
+                    orientation.x,orientation.y,orientation.z,orientation.w=quaternion_from_euler(0,0,0)
+
+                #was previously going to the left, goal goal is further to the left, continue straight
+                elif prevPt.x > point.x and prev_yaw==math.pi:
+                    print("continue to the left")
+                    orientation.x,orientation.y,orientation.z,orientation.w=quaternion_from_euler(0,0,math.pi)
+
+                #was previously going to the right, goal goal is  to the left, turn around
+                elif prevPt.x > point.x and prev_yaw==0:
+                    print("turn around")
+                    orientation.x,orientation.y,orientation.z,orientation.w=quaternion_from_euler(0,0,math.pi)
+
+                #was prevously going up (posy) and goal is to the right, then turn to the right
+                elif prevPt.x < point.x and prev_yaw==math.pi/2:
+                    print("gone up now turn right")
+                    orientation.x,orientation.y,orientation.z,orientation.w=quaternion_from_euler(0,0,0)
+
+                #was previsoulsy going up (posy) and goal is to the left, then turn to the left
+                elif prevPt.x>point.x and prev_yaw==math.pi/2:
+                    print("gone up now turn left")
+                    orientation.x,orientation.y,orientation.z,orientation.w=quaternion_from_euler(0,0,math.pi)
+
+                #was prevously going down (negy) and goal is to the left(world), then turn to the left(world)
+                elif prevPt.x > point.x and prev_yaw==(-math.pi/2):
+                    print("gone down now turn left")
+                    orientation.x,orientation.y,orientation.z,orientation.w=quaternion_from_euler(0,0,math.pi)
+
+                #was previsoulsy going down (negy) and goal is to the right (world), then turn to the right
+                elif prevPt.x>point.x and prev_yaw==(3*math.pi/2):
+                    print("gone down now turn right")
+                    orientation.x,orientation.y,orientation.z,orientation.w=quaternion_from_euler(0,0,2*math.pi)
+
+
+                #YCHANGES
+                #WAS previsoulsy going to the right, goal is up(posy) turn to the left
+                elif prevPt.y < point.y and prev_yaw==0:
+                    print("going right, turn up")
+                    orientation.x,orientation.y,orientation.z,orientation.w=quaternion_from_euler(0,0,math.pi/2)
+
+                #was previsoulsy going right(world), goal is down so turn right, (down)
+                elif prevPt.y>point.y and prev_yaw == 0:
+                    print("going right, turn down")
+                    orientation.x,orientation.y,orientation.z,orientation.w=quaternion_from_euler(0,0,3*math.pi/2)
+
+                #was previsoulsy going up, goal is still up so continue straight
+                elif prevPt.y < point.y and prev_yaw == math.pi/2:
+                    print("going up, continue up")
+                    orientation.x,orientation.y,orientation.z,orientation.w=quaternion_from_euler(0,0,math.pi/2)
+
+                #was previsoulsy going left(world), goal is down so turn left, (down)
+                elif prevPt.y>point.y and prev_yaw == math.pi:
+                    print("going left, turn down")
+                    orientation.x,orientation.y,orientation.z,orientation.w=quaternion_from_euler(0,0,-math.pi/2)
+
+                #was previsoulsy going left(world), goal is up so turn right, (up)
+                elif prevPt.y<point.y and prev_yaw == math.pi:
+                    print("going left, turn up")
+                    orientation.x,orientation.y,orientation.z,orientation.w=quaternion_from_euler(0,0,math.pi/2)
+
+                #was previsoulsy going down(world), goal is down so turn right, (down)
+                elif prevPt.y>point.y and prev_yaw == (3*math.pi/2):
+                    print("going down, continue down")
+                    orientation.x,orientation.y,orientation.z,orientation.w=quaternion_from_euler(0,0,3*math.pi/2)
+
+
+            #keep track of the previous point
+            prevPt=point
+            #create header for the stamped poses
+            header2=Header()
+            header2.frame_id="map"
+            #convert points to poses
+            pose=Pose()
+            pose.position=point
+            pose.orientation=orientation
+
+            poseStamped=PoseStamped()
+            poseStamped.pose=pose
+            poseStamped.header=header2
+            #pose array created for the path
+            poseArray.append(poseStamped)
+
+            #keep track of the previous pose orientation for the calcualtions above
+            prevOrient=pose.orientation
+            q = [prevOrient.x, prevOrient.y, prevOrient.z, prevOrient.w]
+            prev_roll, prev_pitch, prev_yaw = euler_from_quaternion(q)
+
+            i+=1
+
+        #creating path object to return
+        path=Path()
+        header1=Header()
+        header1.frame_id="map"
+        path.poses=poseArray
+        path.header=header1
+
+        #publish GridCells
+        pointArray=[]
+        for k in path.poses:
+            pointArray.append(k.pose.position)
+
+        gridCell=map_helper.to_cells(pointArray,self.map)
+        self.pubPath.publish(gridCell)
+        print("pubishing GRIDCELLS")
+        return path
+
+        #pass
 
 
 if __name__ == '__main__':
+    a_star=A_Star()
+    while not rospy.is_shutdown():
+        rospy.spin()
     pass
