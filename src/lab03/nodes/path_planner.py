@@ -194,6 +194,14 @@ class PathPlanner:
         """
         ### REQUIRED CREDIT
         rospy.loginfo("Requesting the map")
+        rospy.wait_for_service('/static_map')
+        try:
+            request_map = rospy.ServiceProxy('/static_map', GetMap)
+            OccupancyGrid = request_map()
+            return OccupancyGrid
+        except rospy.ServiceException, e:
+            
+            print "Service call failed: %s"%e
 
 
 
@@ -206,15 +214,40 @@ class PathPlanner:
         :return        [OccupancyGrid] The C-Space.
         """
         ### REQUIRED CREDIT
-        rospy.loginfo("Calculating C-Space")
+       rospy.loginfo("Calculating C-Space")
+        n = mapdata.info.width * mapdata.info.height
+        inflatedGrid = [0]*n
+        grid_pos = [0]*n
+
         ## Go through each cell in the occupancy grid
+        for w in mapdata.data:
+            x = w % mapdata.info.width
+            y = (w - x)/mapdata.info.width
+            grid_pos[w] = [x,y,0]
+            self.edge_check(x,y,mapdata.info.width,mapdata.info.height,mapdata)
+            yup1 = ((y+1)*mapdata.info.width)+x
+            ydwn1 = ((y-1)*mapdata.info.width)+x
+            if self.mapdata.data[w] >= objs:
+                inflatedGrid[w] = 100
+            elif ((not edge_check.leftMost and self.mapdata.data[w-1] >= objs) or (not edge_check.rightMost and self.mapdata.data[w+1] >= objs)
+                or (not edge_check.top and self.mapdata.data[yup] >= objs) or (edge_check.bottom and self.mapdata.data[ydwn] >= objs)):
+                inflatedGrid[w] = 100
         ## Inflate the obstacles where necessary
         # TODO
         ## Create a GridCells message and publish it
+        msg_grid_cell = GridCells()
+        # Fix header
+        msg.grid_cell.Header.frame_id = "/map"
+        msg_grid_cell.height = mapdata.info.height
+        msg_grid_cell.width = mapdata.info.width
+        msg_grid_cell.Point = grid_pos
+        self.pub.publish(msg_grid_cell)
         # TODO
         ## Return the C-space
-        return mapdata
-
+        #inflatedb grid
+        return inflatedGrid
+        #Go through all original map data and check for 100, if 100 make new
+        # grid 100, if not check surrounding grids
 
 
     def a_star(self, mapdata, start, goal):
@@ -271,9 +304,11 @@ class PathPlanner:
 
 
     def run(self):
+        rospy.sleep(2.0)
         """
         Runs the node until Ctrl-C is pressed.
         """
+        self.calc_cspace(mapdata, 1)
         rospy.spin()
 
 
