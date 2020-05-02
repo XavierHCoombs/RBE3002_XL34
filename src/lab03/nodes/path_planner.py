@@ -265,6 +265,7 @@ class PathPlanner:
         """
         ### EXTRA CREDIT
         rospy.loginfo("Optimizing path")
+        return path
 
 
 
@@ -275,7 +276,29 @@ class PathPlanner:
         :return     [Path]        A Path message (the coordinates are expressed in the world)
         """
         ### REQUIRED CREDIT
+       #path is a list of grid Tuples
+        #convert list of tuples to list of PoseStamped
+        poseArray = [];
+        #rospy.loginfo("NODES IN PATH: "+str(len(path)));
+        for key in path:
+            rospy.loginfo("key[0]: "+str(key[0])+", key[1]:"+str(key[1]));
+            worldCoords = PathPlanner.grid_to_world(mapdata, key[0], key[1]);
+            poseStamped = PoseStamped();
+            poseStamped.pose.position.x = worldCoords.x;
+            poseStamped.pose.position.y = worldCoords.y;
+            header = Header()
+            header.frame_id = "map"
+            poseStamped.header = header;
+            poseArray.append(poseStamped);
+
+        pathHeader = Header();
+        pathHeader.frame_id = "map";
+        pathObject = Path();
+        pathObject.header = pathHeader;
+        pathObject.poses = poseArray;
+
         rospy.loginfo("Returning a Path message")
+        return pathObject;
 
 
 
@@ -295,6 +318,14 @@ class PathPlanner:
         ## Execute A*
         start = PathPlanner.world_to_grid(mapdata, msg.start.pose.position)
         goal  = PathPlanner.world_to_grid(mapdata, msg.goal.pose.position)
+        """ #not needed anymore
+        startPoint = Point();
+        startPoint.x = start[0];
+        startPoint.y = start[1];
+        goalPoint = Point();
+        goalPoint.x = goal[0];
+        goalPoint.y = goal[1];
+        """
         path  = self.a_star(cspacedata, start, goal)
         ## Optimize waypoints
         waypoints = PathPlanner.optimize_path(path)
