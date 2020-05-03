@@ -5,7 +5,9 @@ import rospy
 from nav_msgs.srv import GetPlan, GetMap
 from nav_msgs.msg import GridCells, OccupancyGrid, Path
 from geometry_msgs.msg import Point, Pose, PoseStamped
-
+from std_msgs.msg import Header
+from geometry_msgs.msg import Point, Pose, PoseStamped
+from Queue import PriorityQueue
 
 
 class PathPlanner:
@@ -109,7 +111,23 @@ class PathPlanner:
         :return        [[PoseStamped]] The path as a list of PoseStamped (world coordinates).
         """
         ### REQUIRED CREDIT
-        pass
+        
+        poseArray = [];
+        #rospy.loginfo("NODES IN PATH: "+str(len(path)));
+        for k in path:
+            rospy.loginfo("k[0]: "+str(k[0])+", k[1]:"+str(k[1]));
+            worldC = PathPlanner.grid_to_world(mapdata, k[0], k[1]);
+            poseStamped = PoseStamped();
+            poseStamped.pose.position.x = worldC.x;
+            poseStamped.pose.position.y = worldC.y;
+            header = Header()
+            header.frame_id = "map"
+            poseStamped.header = header;
+            poseArray.append(poseStamped);
+   
+        return path_to_poses;
+    
+        #pass
 
 
 
